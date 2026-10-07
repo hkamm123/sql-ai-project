@@ -6,6 +6,9 @@ from time import time
 
 print("Running db_bot.py!")
 
+models = ["gpt-5.6-luna", "gpt-4o", "gpt-davinci-v3", "gpt-6.0-turbo"]
+chosen_model = models[0]
+
 fdir = os.path.dirname(__file__)
 def getPath(fname):
     return os.path.join(fdir, fname)
@@ -48,7 +51,7 @@ with open(configPath) as configFile:
 
 openAiClient = OpenAI(api_key = config["openaiKey"])
 openAiClient.models.list() # check if the key is valid (update in config.json)
-chosen_model = "gpt-4o"
+# chosen_model = "gpt-5.6-luna"
 
 def getChatGptResponse(content):
     stream = openAiClient.chat.completions.create(
@@ -78,15 +81,11 @@ strategies = {
 }
 
 questions = [
-    "Which are the most awarded dogs?",
-    # "Which dogs have multiple owners?",
-    # "Which people have multiple dogs?",
-    # "What are the top 3 cities represented?",
-    # "What are the names and cities of the dogs who have awards?",
-    # "Who has more than one phone number?",
-    "Who doesn't have a way for us to text them?",
-    "Will we have a problem texting any of the previous award winners?"
-    # "I need insert sql into my tables can you provide good unique data?"
+    "who likes to shop at Costco?",
+    "What percentage of Jordan Rivera's total money has been spent?",
+    "Who has spent all of their money?",
+    "Who doesn't have any money?",
+    "who has the most money?"
 ]
 
 
