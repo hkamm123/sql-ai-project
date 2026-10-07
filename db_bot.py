@@ -6,7 +6,7 @@ from time import time
 
 print("Running db_bot.py!")
 
-models = ["gpt-5.6-luna", "gpt-4o", "gpt-davinci-v3", "gpt-6.0-turbo"]
+models = ["gpt-5.6-luna", "gpt-4o", "gpt-6-astra"]
 chosen_model = models[0]
 
 fdir = os.path.dirname(__file__)
