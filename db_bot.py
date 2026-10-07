@@ -38,6 +38,7 @@ with (
 # execute setup files
 sqliteCursor.executescript(setupSqlScript) # setup tables and keys
 sqliteCursor.executescript(setupSQlDataScript) # setup tables and keys
+sqliteCursor.execute("PRAGMA query_only = ON") # reject any generated SQL that would change the data
 
 def runSql(query):
     result = sqliteCursor.execute(query).fetchall()
@@ -129,7 +130,7 @@ def getChatGptResponse(content):
 
 
 # strategies
-commonSqlOnlyRequest = """ Give me a sqlite select statement that answers the question. DO NOT INCLUDE ANY STATEMENTS THAT WOULD ALTER THE DATA, such as drop or delete or update statements.
+commonSqlOnlyRequest = """ Give me a sqlite select statement that answers the question.
 Only respond with sqlite syntax. If there is an error do not explain it!"""
 
 # question/SQL pairs for this database; keep them different from the test questions below
