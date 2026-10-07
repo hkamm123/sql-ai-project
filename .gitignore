@@ -1,2 +1,4 @@
 config.json
 response*.json
+
+aidb.sqlite
