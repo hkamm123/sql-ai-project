@@ -35,3 +35,79 @@ See [results.md](results.md) for example questions that worked and failed, and h
 1. `pip install openai`
 2. Copy `config.template.json` to `config.json` and add your OpenAI API key.
 3. `python db_bot.py`
+## Query We thought it did well on
+
+**Question**:
+
+**GPT SQL Response**:
+```sql
+```
+
+**Friendly Response**:
+
+
+## Question that it tripped up on
+
+<!-- Explain what you expected and what went wrong. -->
+
+**Question**:
+
+**GPT SQL Response**:
+```sql
+```
+
+**SQL Result**:
+
+**Friendly Response**:
+
+<!-- Explain why the answer was wrong or unhelpful. -->
+
+
+## Zero-shot
+
+**Question**:
+
+**GPT SQL Response**:
+```sql
+```
+
+**SQL Result**:
+
+**Friendly Response**:
+
+<!-- How did zero-shot do? Note any questions it got right or wrong. -->
+
+
+## Single-domain multi-shot
+
+**Question**:
+
+**GPT SQL Response**:
+```sql
+```
+
+**SQL Result**:
+
+**Friendly Response**:
+
+<!-- Did the example questions from this database help or hurt compared to zero-shot? -->
+
+
+## Cross-domain multi-shot
+
+**Question**:
+
+**GPT SQL Response**:
+```sql
+```
+
+**SQL Result**:
+
+**Friendly Response**:
+
+<!-- Did the dog show and library examples help or hurt compared to the other strategies? -->
+
+
+## Conclusion
+
+<!-- What did you learn about how well GPT generates SQL, and how the strategies compared? -->
