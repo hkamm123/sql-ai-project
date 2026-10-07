@@ -41,7 +41,8 @@ sqliteCursor.executescript(setupSQlDataScript) # setup tables and keys
 
 def runSql(query):
     result = sqliteCursor.execute(query).fetchall()
-    return result
+    columnNames = [column[0] for column in sqliteCursor.description]
+    return columnNames, result
 
 # show a few distinct values from each column, in the paper's "SelectCol" format
 def getExampleColumnValues(cursor, valueCount = 3):
@@ -128,7 +129,8 @@ def getChatGptResponse(content):
 
 
 # strategies
-commonSqlOnlyRequest = " Give me a sqlite select statement that answers the question. Only respond with sqlite syntax. If there is an error do not explain it!"
+commonSqlOnlyRequest = """ Give me a sqlite select statement that answers the question. DO NOT INCLUDE ANY STATEMENTS THAT WOULD ALTER THE DATA, such as drop or delete or update statements.
+Only respond with sqlite syntax. If there is an error do not explain it!"""
 
 # question/SQL pairs for this database; keep them different from the test questions below
 singleDomainExamples = [
@@ -190,19 +192,30 @@ for strategy in strategies:
         print("Question:")
         print(question)
         error = "None"
+        sqlSyntaxResponse = None
+        queryRawResponse = None
+        friendlyResponse = None
         try:
             getSqlFromQuestionEngineeredPrompt = strategies[strategy] + " " + question
             sqlSyntaxResponse = getChatGptResponse(getSqlFromQuestionEngineeredPrompt)
             sqlSyntaxResponse = sanitizeForJustSql(sqlSyntaxResponse)
             print("SQL Syntax Response:")
             print(sqlSyntaxResponse)
-            queryRawResponse = str(runSql(sqlSyntaxResponse))
+            columnNames, rows = runSql(sqlSyntaxResponse)
+            queryRawResponse = str(rows)
             print("Query Raw Response:")
             print(queryRawResponse)
 
-            # TODO this prompt is insufficient. ChatGPT doesn't have all the context that it needs.
-            # What context would help the friendly response be more successful? Can you fix it?
-            friendlyResultsPrompt = "I asked a question \"" + question +"\" and the response was \""+queryRawResponse+"\" Please, just give a concise response in a more friendly way? Please do not give any other suggests or chatter."
+            # include the SQL and column names so GPT knows what the raw values mean
+            friendlyResultsPrompt = (
+                f"I asked the question \"{question}\".\n"
+                f"This SQL was run against a household budgeting database (amounts are in dollars):\n{sqlSyntaxResponse}\n"
+                f"Columns: {columnNames}\n"
+                f"Rows: {queryRawResponse}\n"
+                "Answer my question in one or two friendly sentences using only these results. "
+                "If the results are empty or don't actually answer the question, say so instead of guessing. "
+                "Please do not give any other suggestions or chatter."
+            )
             friendlyResponse = getChatGptResponse(friendlyResultsPrompt)
             print("Friendly Response:")
             print(friendlyResponse)
