@@ -1,0 +1,27 @@
+{
+  "strategy": "single_domain_double_shot",
+  "prompt_prefix": "create table person (\n    person_id integer primary key,\n    name varchar(20) not null\n);\n\ncreate table phone (\n    phone_id integer primary key,\n    person_id integer not null,\n    area_code int not null,\n    number int not null,\n    can_recieve_sms tinyint not null,\n    foreign key (person_id) references person (person_id)\n);\n\ncreate table address (\n    address_id integer primary key,\n    person_id integer not null,\n    street varchar(50),\n    zip integer not null\n);\n\ncreate table zip (\n    zip integer primary key,\n    city varchar(35),\n    state_two_letter_code char(2)\n);\n\ncreate table dog (\n    dog_id integer primary key,\n    name varchar(35),\n    breed varchar(35),\n    birth_date date\n);\n\ncreate table award (\n    award_id integer primary key,\n    dog_id integer not null,\n    event_date date,\n    award_name varchar(25) not null,\n    foreign key (dog_id) references dog (dog_id)\n);\n\ncreate table person_dog (\n    dog_id integer,\n    person_id integer,\n    foreign key (dog_id) references dog (dog_id),\n    foreign key (person_id) references person (person_id)\n);\n Who doesn't have a way for us to text them?  \nSELECT p.person_id, p.name\nFROM person p\nLEFT JOIN phone ph ON p.person_id = ph.person_id AND ph.can_recieve_sms = 1\nWHERE ph.phone_id IS NULL;\n  Give me a sqlite select statement that answers the question. Only respond with sqlite syntax. If there is an error do not explain it!",
+  "questionResults": [
+    {
+      "question": "Which are the most awarded dogs?",
+      "sql": "SELECT d.dog_id, d.name, COUNT(a.award_id) AS award_count\nFROM dog d\nJOIN award a ON d.dog_id = a.dog_id\nGROUP BY d.dog_id, d.name\nORDER BY award_count DESC;",
+      "queryRawResponse": "[(1, 'Buddy', 2), (3, 'Bella', 1)]",
+      "friendlyResponse": "The most awarded dogs are Buddy with 2 awards and Bella with 1 award.",
+      "error": "None"
+    },
+    {
+      "question": "Who doesn't have a way for us to text them?",
+      "sql": "SELECT p.person_id, p.name\nFROM person p\nLEFT JOIN phone ph ON p.person_id = ph.person_id AND ph.can_recieve_sms = 1\nWHERE ph.person_id IS NULL;",
+      "queryRawResponse": "[(2, 'Bob Jones'), (4, 'Jimmy Hendricks'), (5, 'Sydney Smith'), (6, 'Jordan Malone')]",
+      "friendlyResponse": "Bob Jones, Jimmy Hendricks, Sydney Smith, and Jordan Malone don't have a way for us to text them.",
+      "error": "None"
+    },
+    {
+      "question": "Will we have a problem texting any of the previous award winners?",
+      "sql": "SELECT d.dog_id, d.name\nFROM dog d\nJOIN award a ON d.dog_id = a.dog_id\nJOIN person_dog pd ON d.dog_id = pd.dog_id\nJOIN person p ON pd.person_id = p.person_id\nLEFT JOIN phone ph ON p.person_id = ph.person_id AND ph.can_recieve_sms = 1\nWHERE ph.phone_id IS NULL;",
+      "queryRawResponse": "[(3, 'Bella')]",
+      "friendlyResponse": "You might only have trouble texting Bella.",
+      "error": "None"
+    }
+  ]
+}
