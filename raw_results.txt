@@ -1,0 +1,1535 @@
+Running db_bot.py!
+Using model: gpt-5.6-luna
+########################################################################
+########################################################################
+########################################################################
+/home/hyrum/Documents/classes/452/sql-ai-project/config.json
+########################################################################
+Running strategy: zero_shot
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who likes to shop at Costco?
+SQL Syntax Response:
+SELECT DISTINCT u.name
+FROM user AS u
+JOIN expense AS e ON e.user_id = u.user_id
+WHERE e.name LIKE '%Costco%';
+Query Raw Response:
+[('Jordan Rivera',), ('Sam Rivera',), ('Casey Nguyen',), ('Taylor Brooks',)]
+Friendly Response:
+Jordan Rivera, Sam Rivera, Casey Nguyen, and Taylor Brooks like to shop at Costco.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+What percentage of Jordan Rivera's total money has been spent?
+SQL Syntax Response:
+SELECT
+    100.0 * COALESCE(SUM(e.amount), 0) / NULLIF(SUM(c.max_amount), 0) AS percentage_spent
+FROM budget b
+JOIN user u ON u.user_id = b.owner_id
+JOIN category c ON c.budget_id = b.budget_id
+LEFT JOIN expense e ON e.category_id = c.category_id
+WHERE u.name = 'Jordan Rivera';
+Query Raw Response:
+[(42.35265938069217,)]
+Friendly Response:
+Jordan Rivera has spent approximately **42.35%** of their total budget.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+Who has spent all of their money?
+SQL Syntax Response:
+SELECT u.name
+FROM user AS u
+JOIN expense AS e
+  ON e.user_id = u.user_id
+JOIN category AS c
+  ON c.category_id = e.category_id
+GROUP BY u.user_id, u.name
+HAVING SUM(e.amount) >= SUM(c.max_amount);
+Query Raw Response:
+[]
+Friendly Response:
+No one was identified as having spent all of their money.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+Who doesn't have any money?
+SQL Syntax Response:
+SELECT u.name
+FROM user AS u
+LEFT JOIN expense AS e
+  ON e.user_id = u.user_id
+GROUP BY u.user_id, u.name
+HAVING COALESCE(SUM(e.amount), 0) = 0;
+Query Raw Response:
+[('Morgan Lee',)]
+Friendly Response:
+Morgan Lee doesn’t have any money.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who has the most money?
+SQL Syntax Response:
+SELECT u.name, SUM(e.amount) AS total_amount
+FROM user AS u
+JOIN expense AS e ON e.user_id = u.user_id
+GROUP BY u.user_id, u.name
+ORDER BY total_amount DESC
+LIMIT 1;
+Query Raw Response:
+[('Sam Rivera', 14231.24)]
+Friendly Response:
+Sam Rivera has the most money, with a total of $14,231.24.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who has the least money?
+SQL Syntax Response:
+SELECT u.name
+FROM "user" AS u
+LEFT JOIN expense AS e ON e.user_id = u.user_id
+GROUP BY u.user_id, u.name
+ORDER BY COALESCE(SUM(e.amount), 0) ASC
+LIMIT 1;
+Query Raw Response:
+[('Morgan Lee',)]
+Friendly Response:
+Morgan Lee has the least money based on the household’s recorded expenses.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who has spent the most money?
+SQL Syntax Response:
+SELECT u.name, SUM(e.amount) AS total_spent
+FROM "user" AS u
+JOIN expense AS e ON e.user_id = u.user_id
+GROUP BY u.user_id, u.name
+ORDER BY total_spent DESC
+LIMIT 1;
+Query Raw Response:
+[('Sam Rivera', 14231.24)]
+Friendly Response:
+Sam Rivera has spent the most, with a total of $14,231.24.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+In which of Jordan Rivera's expense catagories has he saved the most money?
+SQL Syntax Response:
+SELECT
+    c.name,
+    c.max_amount - SUM(e.amount) AS money_saved
+FROM user AS u
+JOIN expense AS e ON e.user_id = u.user_id
+JOIN category AS c ON c.category_id = e.category_id
+WHERE u.name = 'Jordan Rivera'
+GROUP BY c.category_id, c.name, c.max_amount
+ORDER BY money_saved DESC
+LIMIT 1;
+Query Raw Response:
+[('Income', 1806.97)]
+Friendly Response:
+Jordan Rivera has saved the most money in the Income category, with $1,806.97 saved.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+which of Casey Nguyen's expenses was the most expensive?
+SQL Syntax Response:
+SELECT e.name, e.amount
+FROM expense AS e
+JOIN user AS u ON e.user_id = u.user_id
+WHERE u.name = 'Casey Nguyen'
+ORDER BY e.amount DESC
+LIMIT 1;
+Query Raw Response:
+[('Rent', 850.0)]
+Friendly Response:
+Casey Nguyen’s most expensive expense was Rent, costing $850.00.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+Who spends the most money on eating out?
+SQL Syntax Response:
+SELECT u.name, SUM(e.amount) AS total_spent
+FROM expense AS e
+JOIN category AS c ON e.category_id = c.category_id
+JOIN user AS u ON e.user_id = u.user_id
+WHERE c.name = 'Eating Out'
+GROUP BY u.user_id, u.name
+ORDER BY total_spent DESC
+LIMIT 1;
+Query Raw Response:
+[('Casey Nguyen', 284.48)]
+Friendly Response:
+Casey Nguyen spends the most on eating out, with a total of $284.48.
+########################################################################
+Running strategy: single_domain_few_shot
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who likes to shop at Costco?
+SQL Syntax Response:
+SELECT u.name, COUNT(*) AS costco_trip_count
+FROM expense e
+JOIN user u ON e.user_id = u.user_id
+WHERE LOWER(e.name) LIKE '%costco%'
+GROUP BY u.user_id, u.name
+ORDER BY costco_trip_count DESC;
+Query Raw Response:
+[('Jordan Rivera', 9), ('Sam Rivera', 5), ('Casey Nguyen', 4), ('Taylor Brooks', 2)]
+Friendly Response:
+Jordan Rivera shops at Costco most often, with 9 trips, followed by Sam Rivera with 5, Casey Nguyen with 4, and Taylor Brooks with 2.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+What percentage of Jordan Rivera's total money has been spent?
+SQL Syntax Response:
+SELECT
+    100.0 * COALESCE((
+        SELECT SUM(e.amount)
+        FROM expense e
+        JOIN user u ON e.user_id = u.user_id
+        WHERE u.name = 'Jordan Rivera'
+    ), 0) / NULLIF((
+        SELECT SUM(c.max_amount)
+        FROM category c
+        JOIN budget b ON c.budget_id = b.budget_id
+        JOIN user u ON b.owner_id = u.user_id
+        WHERE u.name = 'Jordan Rivera'
+    ), 0) AS percentage_spent;
+Query Raw Response:
+[(36.90822422258593,)]
+Friendly Response:
+Jordan Rivera has spent approximately **36.91%** of their total budgeted money.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+Who has spent all of their money?
+SQL Syntax Response:
+WITH category_totals AS (
+    SELECT
+        c.budget_id,
+        c.category_id,
+        c.max_amount,
+        COALESCE(SUM(e.amount), 0) AS spent
+    FROM category c
+    LEFT JOIN expense e ON e.category_id = c.category_id
+    GROUP BY c.budget_id, c.category_id, c.max_amount
+)
+SELECT u.name
+FROM budget b
+JOIN user u ON u.user_id = b.owner_id
+JOIN category_totals ct ON ct.budget_id = b.budget_id
+GROUP BY b.budget_id, u.name
+HAVING SUM(ct.spent) >= SUM(ct.max_amount);
+Query Raw Response:
+[('Jordan Rivera',)]
+Friendly Response:
+Jordan Rivera has spent all of their budgeted money.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+Who doesn't have any money?
+SQL Syntax Response:
+SELECT u.name
+FROM user AS u
+LEFT JOIN expense AS e ON e.user_id = u.user_id
+GROUP BY u.user_id, u.name
+HAVING COUNT(e.expense_id) = 0;
+Query Raw Response:
+[('Morgan Lee',)]
+Friendly Response:
+Morgan Lee doesn't have any recorded expenses.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who has the most money?
+SQL Syntax Response:
+SELECT u.name, SUM(e.amount) AS total_amount
+FROM user AS u
+JOIN expense AS e ON e.user_id = u.user_id
+GROUP BY u.user_id, u.name
+ORDER BY total_amount DESC
+LIMIT 1;
+Query Raw Response:
+[('Sam Rivera', 14231.24)]
+Friendly Response:
+Sam Rivera has the most money, with a total of $14,231.24.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who has the least money?
+SQL Syntax Response:
+SELECT u.name, COALESCE(SUM(e.amount), 0) AS total_spent
+FROM user AS u
+LEFT JOIN expense AS e ON e.user_id = u.user_id
+GROUP BY u.user_id, u.name
+ORDER BY total_spent ASC
+LIMIT 1;
+Query Raw Response:
+[('Morgan Lee', 0)]
+Friendly Response:
+Morgan Lee has the least money spent, with a total of $0.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who has spent the most money?
+SQL Syntax Response:
+SELECT u.name, SUM(e.amount) AS total_spent
+FROM expense AS e
+JOIN user AS u ON e.user_id = u.user_id
+GROUP BY u.user_id, u.name
+ORDER BY total_spent DESC
+LIMIT 1;
+Query Raw Response:
+[('Sam Rivera', 14231.24)]
+Friendly Response:
+Sam Rivera has spent the most, totaling $14,231.24.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+In which of Jordan Rivera's expense catagories has he saved the most money?
+SQL Syntax Response:
+SELECT
+    c.name,
+    c.max_amount - SUM(e.amount) AS amount_saved
+FROM category AS c
+JOIN expense AS e
+    ON e.category_id = c.category_id
+WHERE EXISTS (
+    SELECT 1
+    FROM expense AS je
+    JOIN user AS u
+        ON u.user_id = je.user_id
+    WHERE je.category_id = c.category_id
+      AND u.name = 'Jordan Rivera'
+)
+GROUP BY c.category_id, c.name, c.max_amount
+ORDER BY amount_saved DESC
+LIMIT 1;
+Query Raw Response:
+[('Income', 388.55999999999995)]
+Friendly Response:
+Jordan Rivera saved the most in the **Income** category, with **$388.56** saved.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+which of Casey Nguyen's expenses was the most expensive?
+SQL Syntax Response:
+SELECT e.name, e.amount, e.expense_date
+FROM expense AS e
+JOIN user AS u ON e.user_id = u.user_id
+WHERE u.name = 'Casey Nguyen'
+ORDER BY e.amount DESC
+LIMIT 1;
+Query Raw Response:
+[('Rent', 850.0, '2026-07-05')]
+Friendly Response:
+Casey Nguyen’s most expensive expense was Rent, costing $850.00 on July 5, 2026.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+Who spends the most money on eating out?
+SQL Syntax Response:
+SELECT u.name, SUM(e.amount) AS total_spent
+FROM expense AS e
+JOIN category AS c ON e.category_id = c.category_id
+JOIN user AS u ON e.user_id = u.user_id
+WHERE c.name = 'Eating Out'
+GROUP BY u.user_id, u.name
+ORDER BY total_spent DESC
+LIMIT 1;
+Query Raw Response:
+[('Casey Nguyen', 284.48)]
+Friendly Response:
+Casey Nguyen spends the most on eating out, with a total of $284.48.
+########################################################################
+Running strategy: cross_domain_few_shot
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who likes to shop at Costco?
+SQL Syntax Response:
+SELECT DISTINCT u.name
+FROM user AS u
+JOIN expense AS e ON e.user_id = u.user_id
+WHERE e.name LIKE '%Costco%';
+Query Raw Response:
+[('Jordan Rivera',), ('Sam Rivera',), ('Casey Nguyen',), ('Taylor Brooks',)]
+Friendly Response:
+Jordan Rivera, Sam Rivera, Casey Nguyen, and Taylor Brooks like to shop at Costco.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+What percentage of Jordan Rivera's total money has been spent?
+SQL Syntax Response:
+WITH jordan_budgets AS (
+    SELECT b.budget_id
+    FROM budget b
+    JOIN user u ON u.user_id = b.owner_id
+    WHERE u.name = 'Jordan Rivera'
+),
+total_budget AS (
+    SELECT COALESCE(SUM(c.max_amount), 0) AS total_amount
+    FROM category c
+    JOIN jordan_budgets jb ON jb.budget_id = c.budget_id
+),
+total_spent AS (
+    SELECT COALESCE(SUM(e.amount), 0) AS spent_amount
+    FROM expense e
+    JOIN category c ON c.category_id = e.category_id
+    JOIN jordan_budgets jb ON jb.budget_id = c.budget_id
+)
+SELECT 100.0 * spent_amount / NULLIF(total_amount, 0) AS percentage_spent
+FROM total_budget, total_spent;
+Query Raw Response:
+[(95.13752045826514,)]
+Friendly Response:
+Jordan Rivera has spent approximately **95.14%** of their total budget.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+Who has spent all of their money?
+SQL Syntax Response:
+WITH budget_totals AS (
+    SELECT
+        b.budget_id,
+        b.owner_id,
+        SUM(c.max_amount) AS total_budget
+    FROM budget b
+    JOIN category c
+        ON c.budget_id = b.budget_id
+    GROUP BY b.budget_id, b.owner_id
+),
+spending_totals AS (
+    SELECT
+        b.budget_id,
+        COALESCE(SUM(e.amount), 0) AS total_spent
+    FROM budget b
+    JOIN category c
+        ON c.budget_id = b.budget_id
+    LEFT JOIN expense e
+        ON e.category_id = c.category_id
+       AND e.expense_date BETWEEN b.start_date AND b.end_date
+    GROUP BY b.budget_id
+)
+SELECT DISTINCT u.name
+FROM budget_totals bt
+JOIN spending_totals st
+    ON st.budget_id = bt.budget_id
+JOIN "user" u
+    ON u.user_id = bt.owner_id
+WHERE st.total_spent >= bt.total_budget;
+Query Raw Response:
+[('Jordan Rivera',)]
+Friendly Response:
+Jordan Rivera has spent all of their money.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+Who doesn't have any money?
+SQL Syntax Response:
+SELECT u.user_id, u.name
+FROM user AS u
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM expense AS e
+    WHERE e.user_id = u.user_id
+);
+Query Raw Response:
+[(4, 'Morgan Lee')]
+Friendly Response:
+Morgan Lee doesn’t have any expenses recorded, so they’re the one without any money.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who has the most money?
+SQL Syntax Response:
+WITH user_totals AS (
+    SELECT
+        u.user_id,
+        u.name,
+        COALESCE(SUM(e.amount), 0) AS total_amount
+    FROM user AS u
+    LEFT JOIN expense AS e ON e.user_id = u.user_id
+    GROUP BY u.user_id, u.name
+)
+SELECT name, total_amount
+FROM user_totals
+WHERE total_amount = (SELECT MAX(total_amount) FROM user_totals);
+Query Raw Response:
+[('Sam Rivera', 14231.24)]
+Friendly Response:
+Sam Rivera has the most money, with a total of $14,231.24.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who has the least money?
+SQL Syntax Response:
+SELECT u.name, COALESCE(SUM(e.amount), 0) AS total_spent
+FROM "user" AS u
+LEFT JOIN expense AS e ON e.user_id = u.user_id
+GROUP BY u.user_id, u.name
+ORDER BY total_spent ASC
+LIMIT 1;
+Query Raw Response:
+[('Morgan Lee', 0)]
+Friendly Response:
+Morgan Lee has the least money spent, with a total of $0.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who has spent the most money?
+SQL Syntax Response:
+SELECT u.name, SUM(e.amount) AS total_spent
+FROM user AS u
+JOIN expense AS e ON e.user_id = u.user_id
+GROUP BY u.user_id, u.name
+ORDER BY total_spent DESC
+LIMIT 1;
+Query Raw Response:
+[('Sam Rivera', 14231.24)]
+Friendly Response:
+Sam Rivera has spent the most, with a total of $14,231.24.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+In which of Jordan Rivera's expense catagories has he saved the most money?
+SQL Syntax Response:
+SELECT
+    c.name AS category,
+    c.max_amount - SUM(e.amount) AS amount_saved
+FROM category AS c
+JOIN expense AS e
+    ON e.category_id = c.category_id
+JOIN "user" AS u
+    ON u.user_id = e.user_id
+WHERE u.name = 'Jordan Rivera'
+GROUP BY c.category_id, c.name, c.max_amount
+ORDER BY amount_saved DESC
+LIMIT 1;
+Query Raw Response:
+[('Income', 1806.97)]
+Friendly Response:
+Jordan Rivera saved the most in the **Income** category, with **$1,806.97** saved.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+which of Casey Nguyen's expenses was the most expensive?
+SQL Syntax Response:
+SELECT e.name, e.amount, e.expense_date
+FROM expense AS e
+JOIN user AS u ON e.user_id = u.user_id
+WHERE u.name = 'Casey Nguyen'
+ORDER BY e.amount DESC
+LIMIT 1;
+Query Raw Response:
+[('Rent', 850.0, '2026-07-05')]
+Friendly Response:
+Casey Nguyen's most expensive expense was Rent, which cost $850.00 on July 5, 2026.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+Who spends the most money on eating out?
+SQL Syntax Response:
+SELECT u.name, SUM(e.amount) AS total_spent
+FROM user AS u
+JOIN expense AS e ON e.user_id = u.user_id
+JOIN category AS c ON c.category_id = e.category_id
+WHERE c.name = 'Eating Out'
+GROUP BY u.user_id, u.name
+ORDER BY total_spent DESC
+LIMIT 1;
+Query Raw Response:
+[('Casey Nguyen', 284.48)]
+Friendly Response:
+Casey Nguyen spends the most money on eating out, totaling $284.48.
+Done!
+Using model: gpt-4o
+########################################################################
+########################################################################
+########################################################################
+/home/hyrum/Documents/classes/452/sql-ai-project/config.json
+########################################################################
+Running strategy: zero_shot
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who likes to shop at Costco?
+SQL Syntax Response:
+SELECT u.name
+FROM user u
+JOIN expense e ON u.user_id = e.user_id
+WHERE e.name = "Costco";
+Query Raw Response:
+[('Jordan Rivera',), ('Sam Rivera',), ('Jordan Rivera',), ('Sam Rivera',), ('Jordan Rivera',), ('Taylor Brooks',), ('Sam Rivera',), ('Taylor Brooks',)]
+Friendly Response:
+Jordan Rivera, Sam Rivera, and Taylor Brooks like to shop at Costco based on the expenses recorded in your database.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+What percentage of Jordan Rivera's total money has been spent?
+SQL Syntax Response:
+SELECT 
+    (SUM(e.amount) / c.max_amount) * 100 AS percentage_spent
+FROM 
+    expense e
+JOIN 
+    user u ON e.user_id = u.user_id
+JOIN 
+    category c ON e.category_id = c.category_id
+WHERE 
+    u.name = "Jordan Rivera";
+Query Raw Response:
+[(12027.16,)]
+Friendly Response:
+Jordan Rivera has spent approximately 12027.16% of their total allocated money.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+Who has spent all of their money?
+SQL Syntax Response:
+SELECT u.user_id, u.name
+FROM user u
+JOIN expense e ON u.user_id = e.user_id
+JOIN category c ON e.category_id = c.category_id
+GROUP BY u.user_id
+HAVING SUM(e.amount) >= SUM(c.max_amount)
+Query Raw Response:
+[]
+Friendly Response:
+The results are empty, which indicates that there is no one in the database who has spent all of their money according to the query.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+Who doesn't have any money?
+SQL Syntax Response:
+SELECT u.user_id, u.name
+FROM user u
+LEFT JOIN expense e ON u.user_id = e.user_id
+WHERE e.user_id IS NULL;
+Query Raw Response:
+[(4, 'Morgan Lee')]
+Friendly Response:
+According to the results, Morgan Lee doesn't have any expenses recorded, which might suggest they don't have any money.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who has the most money?
+SQL Syntax Response:
+SELECT u.name, SUM(e.amount) AS total_spent
+FROM user u
+JOIN expense e ON u.user_id = e.user_id
+GROUP BY u.name
+ORDER BY total_spent DESC
+LIMIT 1;
+Query Raw Response:
+[('Sam Rivera', 14231.24)]
+Friendly Response:
+Based on the results, Sam Rivera has the highest total spending of $14,231.24.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who has the least money?
+SQL Syntax Response:
+SELECT u.name, SUM(e.amount) AS total_expenses
+FROM user u
+JOIN expense e ON u.user_id = e.user_id
+GROUP BY u.user_id
+ORDER BY total_expenses ASC
+LIMIT 1;
+Query Raw Response:
+[('Taylor Brooks', 418.12)]
+Friendly Response:
+Based on the results, Taylor Brooks has spent the least amount on expenses, totaling $418.12.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who has spent the most money?
+SQL Syntax Response:
+SELECT u.name, SUM(e.amount) AS total_spent
+FROM expense e
+JOIN user u ON e.user_id = u.user_id
+GROUP BY e.user_id
+ORDER BY total_spent DESC
+LIMIT 1;
+Query Raw Response:
+[('Sam Rivera', 14231.24)]
+Friendly Response:
+Sam Rivera has spent the most money, with a total of $14,231.24.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+In which of Jordan Rivera's expense catagories has he saved the most money?
+SQL Syntax Response:
+SELECT c.name, (c.max_amount - SUM(e.amount)) AS saved_amount
+FROM user u
+JOIN budget b ON u.user_id = b.owner_id
+JOIN category c ON b.budget_id = c.budget_id
+JOIN expense e ON c.category_id = e.category_id
+WHERE u.name = 'Jordan Rivera'
+GROUP BY c.category_id
+ORDER BY saved_amount DESC
+LIMIT 1;
+Query Raw Response:
+[('Income', 464.96000000000004)]
+Friendly Response:
+Jordan Rivera has saved the most money in the “Income” category, with a total savings of approximately $464.96.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+which of Casey Nguyen's expenses was the most expensive?
+SQL Syntax Response:
+SELECT e.name, e.amount
+FROM expense e
+JOIN user u ON e.user_id = u.user_id
+WHERE u.name = "Casey Nguyen"
+ORDER BY e.amount DESC
+LIMIT 1;
+Query Raw Response:
+[('Rent', 850.0)]
+Friendly Response:
+The most expensive expense for Casey Nguyen was the rent, which cost $850.00.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+Who spends the most money on eating out?
+SQL Syntax Response:
+SELECT u.name, SUM(e.amount) AS total_amount
+FROM expense e
+JOIN category c ON e.category_id = c.category_id
+JOIN user u ON e.user_id = u.user_id
+WHERE c.name = 'Eating Out'
+GROUP BY u.user_id
+ORDER BY total_amount DESC
+LIMIT 1;
+Query Raw Response:
+[('Casey Nguyen', 284.48)]
+Friendly Response:
+Casey Nguyen spends the most money on eating out, with a total of $284.48.
+########################################################################
+Running strategy: single_domain_few_shot
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who likes to shop at Costco?
+SQL Syntax Response:
+select u.name
+from expense e
+join user u on e.user_id = u.user_id
+where e.name like '%Costco%'
+group by u.user_id;
+Query Raw Response:
+[('Jordan Rivera',), ('Sam Rivera',), ('Casey Nguyen',), ('Taylor Brooks',)]
+Friendly Response:
+Jordan Rivera, Sam Rivera, Casey Nguyen, and Taylor Brooks like to shop at Costco.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+What percentage of Jordan Rivera's total money has been spent?
+SQL Syntax Response:
+select (sum(e.amount) / (select sum(e.amount) from expense e2 where e2.user_id = (select user_id from user where name = 'Jordan Rivera'))) * 100 as percentage_spent
+from expense e
+join user u on e.user_id = u.user_id
+where u.name = 'Jordan Rivera';
+Query Raw Response:
+[(100.0,)]
+Friendly Response:
+Jordan Rivera has spent 100% of their total money.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+Who has spent all of their money?
+SQL Syntax Response:
+select u.name
+from (
+    select b.budget_id, b.owner_id
+    from budget b
+    join category c on b.budget_id = c.budget_id
+    join expense e on c.category_id = e.category_id
+    group by b.budget_id, b.owner_id
+    having sum(e.amount) >= sum(c.max_amount)
+) as budgets_exceeding
+join user u on budgets_exceeding.owner_id = u.user_id;
+Query Raw Response:
+[]
+Friendly Response:
+The results indicate that no one has spent all of their money according to the data in the household budgeting database.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+Who doesn't have any money?
+SQL Syntax Response:
+select u.name
+from user u
+left join budget b on u.user_id = b.owner_id
+where b.owner_id is null;
+Query Raw Response:
+[('Sam Rivera',), ('Morgan Lee',)]
+Friendly Response:
+Based on the database query results, Sam Rivera and Morgan Lee don't have any money.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who has the most money?
+SQL Syntax Response:
+select u.name, sum(e.amount) as total_expense
+from expense e
+join user u on e.user_id = u.user_id
+group by u.user_id
+order by total_expense desc
+limit 1;
+Query Raw Response:
+[('Sam Rivera', 14231.24)]
+Friendly Response:
+Based on the expenses, it seems Sam Rivera has the most money spent with a total of $14,231.24.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who has the least money?
+SQL Syntax Response:
+select u.name, sum(e.amount) as total_spent
+from expense e
+join user u on e.user_id = u.user_id
+group by u.user_id
+order by total_spent asc
+limit 1;
+Query Raw Response:
+[('Taylor Brooks', 418.12)]
+Friendly Response:
+Based on the results, Taylor Brooks has spent the least amount of money, totaling $418.12.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who has spent the most money?
+SQL Syntax Response:
+select u.name, sum(e.amount) as total_spent
+from expense e
+join user u on e.user_id = u.user_id
+group by u.user_id
+order by total_spent desc
+limit 1;
+Query Raw Response:
+[('Sam Rivera', 14231.24)]
+Friendly Response:
+Sam Rivera has spent the most money, with a total of $14,231.24.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+In which of Jordan Rivera's expense catagories has he saved the most money?
+SQL Syntax Response:
+select c.name, c.max_amount - sum(e.amount) as amount_saved
+from expense e
+join category c on e.category_id = c.category_id
+join user u on e.user_id = u.user_id
+where u.name = 'Jordan Rivera'
+group by c.category_id, c.max_amount
+order by amount_saved desc
+limit 1;
+Query Raw Response:
+[('Income', 1806.97)]
+Friendly Response:
+Jordan Rivera has saved the most money in the "Income" category, with a total of $1,806.97 saved.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+which of Casey Nguyen's expenses was the most expensive?
+SQL Syntax Response:
+select e.name, e.amount, e.expense_date
+from expense e
+join user u on e.user_id = u.user_id
+where u.name = 'Casey Nguyen'
+order by e.amount desc
+limit 1;
+Query Raw Response:
+[('Rent', 850.0, '2026-07-05')]
+Friendly Response:
+Casey Nguyen's most expensive expense was for "Rent," costing $850.00 on July 5, 2026.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+Who spends the most money on eating out?
+SQL Syntax Response:
+select u.name, sum(e.amount) as total_spent
+from expense e
+join user u on e.user_id = u.user_id
+join category c on e.category_id = c.category_id
+where c.name = 'Eating Out'
+group by u.user_id
+order by total_spent desc
+limit 1;
+Query Raw Response:
+[('Casey Nguyen', 284.48)]
+Friendly Response:
+The person who spends the most money on eating out is Casey Nguyen, with a total of $284.48 spent.
+########################################################################
+Running strategy: cross_domain_few_shot
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who likes to shop at Costco?
+SQL Syntax Response:
+select u.name
+from expense e
+join user u on e.user_id = u.user_id
+where e.name like '%Costco%';
+Query Raw Response:
+[('Jordan Rivera',), ('Jordan Rivera',), ('Jordan Rivera',), ('Jordan Rivera',), ('Sam Rivera',), ('Casey Nguyen',), ('Jordan Rivera',), ('Casey Nguyen',), ('Sam Rivera',), ('Sam Rivera',), ('Sam Rivera',), ('Jordan Rivera',), ('Jordan Rivera',), ('Jordan Rivera',), ('Casey Nguyen',), ('Casey Nguyen',), ('Taylor Brooks',), ('Sam Rivera',), ('Jordan Rivera',), ('Taylor Brooks',)]
+Friendly Response:
+Based on the results, Jordan Rivera, Sam Rivera, Casey Nguyen, and Taylor Brooks like to shop at Costco, with Jordan Rivera making the most visits.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+What percentage of Jordan Rivera's total money has been spent?
+SQL Syntax Response:
+select 
+    (select sum(e.amount) 
+     from expense e 
+     join category c on e.category_id = c.category_id 
+     join budget b on c.budget_id = b.budget_id 
+     where b.owner_id = 1) 
+    /
+    (select sum(c.max_amount) 
+     from budget b 
+     join category c on b.budget_id = c.budget_id 
+     where b.owner_id = 1) 
+    * 100 as percentage_spent;
+Query Raw Response:
+[(95.13752045826514,)]
+Friendly Response:
+Jordan Rivera has spent approximately 95.14% of their total money.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+Who has spent all of their money?
+SQL Syntax Response:
+select u.name
+from user u
+join expense e on u.user_id = e.user_id
+join category c on e.category_id = c.category_id
+group by u.user_id
+having sum(e.amount) >= sum(c.max_amount);
+Query Raw Response:
+[]
+Friendly Response:
+The results are empty, so there is no information available to answer your question about who has spent all of their money.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+Who doesn't have any money?
+SQL Syntax Response:
+select u.user_id, u.name
+from user u
+left join budget b on u.user_id = b.owner_id
+where b.budget_id is null;
+Query Raw Response:
+[(2, 'Sam Rivera'), (4, 'Morgan Lee')]
+Friendly Response:
+Sam Rivera and Morgan Lee currently don't have any money in their budgets.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who has the most money?
+SQL Syntax Response:
+select u.name, sum(e.amount) as total_amount
+from user u
+join expense e on u.user_id = e.user_id
+group by u.user_id
+order by total_amount desc
+limit 1;
+Query Raw Response:
+[('Sam Rivera', 14231.24)]
+Friendly Response:
+According to the results from the database, Sam Rivera has the most money with a total amount of $14,231.24 in expenses.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who has the least money?
+SQL Syntax Response:
+select u.name, sum(e.amount) as total_expense
+from user u
+join expense e on u.user_id = e.user_id
+group by u.user_id
+order by total_expense asc
+limit 1;
+Query Raw Response:
+[('Taylor Brooks', 418.12)]
+Friendly Response:
+Based on the results, Taylor Brooks has the least money, with total expenses amounting to $418.12.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who has spent the most money?
+SQL Syntax Response:
+select u.name, sum(e.amount) as total_spent
+from user u
+join expense e on u.user_id = e.user_id
+group by u.user_id
+order by total_spent desc
+limit 1;
+Query Raw Response:
+[('Sam Rivera', 14231.24)]
+Friendly Response:
+The person who has spent the most money is Sam Rivera, with a total of $14,231.24.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+In which of Jordan Rivera's expense catagories has he saved the most money?
+SQL Syntax Response:
+select c.name, max(c.max_amount - sum(e.amount)) as saved_money
+from category c
+join expense e on c.category_id = e.category_id
+join budget b on c.budget_id = b.budget_id
+where b.owner_id = 1
+group by c.category_id
+having saved_money = (
+    select max(c.max_amount - sum(e.amount))
+    from category c
+    join expense e on c.category_id = e.category_id
+    join budget b on c.budget_id = b.budget_id
+    where b.owner_id = 1
+    group by c.category_id
+);
+misuse of aggregate function sum()
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+which of Casey Nguyen's expenses was the most expensive?
+SQL Syntax Response:
+select e.name, e.amount
+from expense e
+join user u on e.user_id = u.user_id
+where u.name = 'Casey Nguyen'
+order by e.amount desc
+limit 1;
+Query Raw Response:
+[('Rent', 850.0)]
+Friendly Response:
+The most expensive expense for Casey Nguyen was "Rent," costing $850.00.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+Who spends the most money on eating out?
+SQL Syntax Response:
+select u.name, sum(e.amount) as total_spent
+from expense e
+join category c on e.category_id = c.category_id
+join user u on e.user_id = u.user_id
+where c.name = 'Eating Out'
+group by u.user_id
+order by total_spent desc
+limit 1;
+Query Raw Response:
+[('Casey Nguyen', 284.48)]
+Friendly Response:
+The person who spends the most money on eating out is Casey Nguyen, with a total of $284.48.
+Done!
+Using model: gpt-6-astra
+########################################################################
+########################################################################
+########################################################################
+/home/hyrum/Documents/classes/452/sql-ai-project/config.json
+########################################################################
+Running strategy: zero_shot
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who likes to shop at Costco?
+SQL Syntax Response:
+SELECT DISTINCT u.user_id, u.name
+FROM user AS u
+JOIN expense AS e ON e.user_id = u.user_id
+WHERE e.name LIKE '%Costco%';
+Query Raw Response:
+[(1, 'Jordan Rivera'), (2, 'Sam Rivera'), (3, 'Casey Nguyen'), (5, 'Taylor Brooks')]
+Friendly Response:
+Jordan Rivera, Sam Rivera, Casey Nguyen, and Taylor Brooks have Costco-related expenses. These results don’t tell us whether they actually like shopping there.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+What percentage of Jordan Rivera's total money has been spent?
+SQL Syntax Response:
+WITH category_totals AS (
+    SELECT
+        c.category_id,
+        c.max_amount,
+        COALESCE(SUM(e.amount), 0) AS spent
+    FROM category AS c
+    JOIN budget AS b ON b.budget_id = c.budget_id
+    JOIN user AS u ON u.user_id = b.owner_id
+    LEFT JOIN expense AS e ON e.category_id = c.category_id
+    WHERE u.name = 'Jordan Rivera'
+    GROUP BY c.category_id, c.max_amount
+)
+SELECT 100.0 * SUM(spent) / NULLIF(SUM(max_amount), 0) AS percentage_spent
+FROM category_totals;
+Query Raw Response:
+[(95.13752045826514,)]
+Friendly Response:
+Jordan Rivera has spent approximately 95.14% of their total budgeted money.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+Who has spent all of their money?
+SQL Syntax Response:
+WITH budget_limits AS (
+    SELECT budget_id, SUM(max_amount) AS total_available
+    FROM category
+    GROUP BY budget_id
+),
+budget_spending AS (
+    SELECT c.budget_id, SUM(e.amount) AS total_spent
+    FROM category AS c
+    JOIN expense AS e ON e.category_id = c.category_id
+    GROUP BY c.budget_id
+)
+SELECT DISTINCT u.user_id, u.name
+FROM user AS u
+JOIN budget AS b ON b.owner_id = u.user_id
+JOIN budget_limits AS bl ON bl.budget_id = b.budget_id
+JOIN budget_spending AS bs ON bs.budget_id = b.budget_id
+WHERE ROUND(bs.total_spent, 2) >= ROUND(bl.total_available, 2);
+Query Raw Response:
+[(1, 'Jordan Rivera')]
+Friendly Response:
+Jordan Rivera has spent all the money allocated to at least one of their budgets, or more.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+Who doesn't have any money?
+SQL Syntax Response:
+WITH category_balances AS (
+    SELECT
+        c.budget_id,
+        c.max_amount - COALESCE(SUM(e.amount), 0) AS remaining
+    FROM category AS c
+    LEFT JOIN expense AS e ON e.category_id = c.category_id
+    GROUP BY c.category_id, c.budget_id, c.max_amount
+)
+SELECT u.user_id, u.name
+FROM user AS u
+LEFT JOIN budget AS b ON b.owner_id = u.user_id
+LEFT JOIN category_balances AS cb ON cb.budget_id = b.budget_id
+GROUP BY u.user_id, u.name
+HAVING COALESCE(SUM(cb.remaining), 0) <= 0;
+Query Raw Response:
+[(2, 'Sam Rivera'), (4, 'Morgan Lee')]
+Friendly Response:
+Sam Rivera and Morgan Lee have $0 or less remaining in their category budgets. These results don’t tell us whether they have any money outside those budgets.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who has the most money?
+SQL Syntax Response:
+SELECT u.user_id, u.name,
+       SUM(c.max_amount - COALESCE(e.total_spent, 0)) AS remaining_money
+FROM user AS u
+JOIN budget AS b ON b.owner_id = u.user_id
+JOIN category AS c ON c.budget_id = b.budget_id
+LEFT JOIN (
+    SELECT category_id, SUM(amount) AS total_spent
+    FROM expense
+    GROUP BY category_id
+) AS e ON e.category_id = c.category_id
+GROUP BY u.user_id, u.name
+ORDER BY remaining_money DESC
+LIMIT 1;
+Query Raw Response:
+[(1, 'Jordan Rivera', 1188.3899999999996)]
+Friendly Response:
+Jordan Rivera has the most money remaining in their budgets: $1,188.39. These results don’t show who has the most money overall.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who has the least money?
+SQL Syntax Response:
+WITH category_balances AS (
+    SELECT
+        c.budget_id,
+        c.max_amount - COALESCE(SUM(e.amount), 0) AS remaining_money
+    FROM category AS c
+    LEFT JOIN expense AS e ON e.category_id = c.category_id
+    GROUP BY c.category_id
+),
+user_balances AS (
+    SELECT
+        u.user_id,
+        u.name,
+        SUM(cb.remaining_money) AS remaining_money
+    FROM user AS u
+    JOIN budget AS b ON b.owner_id = u.user_id
+    JOIN category_balances AS cb ON cb.budget_id = b.budget_id
+    GROUP BY u.user_id, u.name
+)
+SELECT name, remaining_money
+FROM user_balances
+WHERE remaining_money = (SELECT MIN(remaining_money) FROM user_balances);
+Query Raw Response:
+[('Taylor Brooks', 181.88)]
+Friendly Response:
+Taylor Brooks has the least money remaining in their budget, with $181.88.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who has spent the most money?
+SQL Syntax Response:
+SELECT u.user_id, u.name, SUM(e.amount) AS total_spent
+FROM user AS u
+JOIN expense AS e ON e.user_id = u.user_id
+GROUP BY u.user_id, u.name
+ORDER BY total_spent DESC
+LIMIT 1;
+Query Raw Response:
+[(2, 'Sam Rivera', 14231.24)]
+Friendly Response:
+Sam Rivera has spent the most money, with a total of $14,231.24.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+In which of Jordan Rivera's expense catagories has he saved the most money?
+SQL Syntax Response:
+SELECT
+    c.name,
+    c.max_amount - SUM(e.amount) AS money_saved
+FROM category AS c
+JOIN expense AS e ON e.category_id = c.category_id
+JOIN user AS u ON u.user_id = e.user_id
+WHERE u.name = 'Jordan Rivera'
+GROUP BY c.category_id, c.name, c.max_amount
+ORDER BY money_saved DESC
+LIMIT 1;
+Query Raw Response:
+[('Income', 1806.97)]
+Friendly Response:
+The result shows “Income” with $1,806.97 saved, but it doesn’t identify an expense category, so it doesn’t answer which expense category Jordan Rivera saved the most in.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+which of Casey Nguyen's expenses was the most expensive?
+SQL Syntax Response:
+SELECT e.*
+FROM expense AS e
+JOIN user AS u ON u.user_id = e.user_id
+WHERE u.name = 'Casey Nguyen'
+  AND e.amount = (
+      SELECT MAX(e2.amount)
+      FROM expense AS e2
+      JOIN user AS u2 ON u2.user_id = e2.user_id
+      WHERE u2.name = 'Casey Nguyen'
+  );
+Query Raw Response:
+[(53, 'Rent', 850.0, '2026-07-05', 45, 3), (98, 'Rent', 850.0, '2026-08-03', 52, 3), (146, 'Rent', 850.0, '2026-09-03', 59, 3)]
+Friendly Response:
+Casey Nguyen’s most expensive expense was rent at $850, tied across three payments on July 5, August 3, and September 3, 2026.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+Who spends the most money on eating out?
+SQL Syntax Response:
+SELECT u.user_id, u.name, SUM(e.amount) AS total_spent
+FROM user AS u
+JOIN expense AS e ON e.user_id = u.user_id
+JOIN category AS c ON c.category_id = e.category_id
+WHERE c.name = 'Eating Out' COLLATE NOCASE
+GROUP BY u.user_id, u.name
+ORDER BY total_spent DESC
+LIMIT 1;
+Query Raw Response:
+[(3, 'Casey Nguyen', 284.48)]
+Friendly Response:
+Casey Nguyen spends the most on eating out, with a total of $284.48.
+########################################################################
+Running strategy: single_domain_few_shot
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who likes to shop at Costco?
+SQL Syntax Response:
+select u.name, count(*) as costco_trips
+from expense e
+join user u on e.user_id = u.user_id
+where e.name like '%costco%'
+group by u.user_id, u.name
+order by costco_trips desc;
+Query Raw Response:
+[('Jordan Rivera', 9), ('Sam Rivera', 5), ('Casey Nguyen', 4), ('Taylor Brooks', 2)]
+Friendly Response:
+Jordan Rivera has the most recorded Costco trips (9), followed by Sam Rivera (5), Casey Nguyen (4), and Taylor Brooks (2). These results show who shops there, but not whether they like it.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+What percentage of Jordan Rivera's total money has been spent?
+SQL Syntax Response:
+select
+    100.0 * (
+        select coalesce(sum(e.amount), 0)
+        from expense e
+        join user u on e.user_id = u.user_id
+        where u.name = 'Jordan Rivera'
+    ) / nullif((
+        select sum(c.max_amount)
+        from category c
+        join budget b on c.budget_id = b.budget_id
+        join user u on b.owner_id = u.user_id
+        where u.name = 'Jordan Rivera'
+    ), 0) as percentage_spent;
+Query Raw Response:
+[(36.90822422258593,)]
+Friendly Response:
+Jordan Rivera has spent approximately 36.91% of their total money.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+Who has spent all of their money?
+SQL Syntax Response:
+select distinct u.name
+from user u
+join budget b on b.owner_id = u.user_id
+where (
+    select coalesce(sum(e.amount), 0)
+    from expense e
+    join category c on e.category_id = c.category_id
+    where c.budget_id = b.budget_id
+) >= (
+    select sum(c.max_amount)
+    from category c
+    where c.budget_id = b.budget_id
+);
+Query Raw Response:
+[('Jordan Rivera',)]
+Friendly Response:
+Jordan Rivera has spent all the money allocated to at least one of their budgets, or more.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+Who doesn't have any money?
+SQL Syntax Response:
+SELECT u.user_id, u.name
+FROM user AS u
+JOIN budget AS b ON b.owner_id = u.user_id
+JOIN category AS c ON c.budget_id = b.budget_id
+LEFT JOIN (
+    SELECT category_id, SUM(amount) AS spent
+    FROM expense
+    GROUP BY category_id
+) AS e ON e.category_id = c.category_id
+GROUP BY u.user_id, u.name
+HAVING SUM(c.max_amount) - SUM(COALESCE(e.spent, 0)) <= 0;
+Query Raw Response:
+[]
+Friendly Response:
+No one matched this query’s criteria, but these results don’t tell us who has no money.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who has the most money?
+SQL Syntax Response:
+SELECT u.name, SUM(e.amount) AS total_amount
+FROM user AS u
+JOIN expense AS e ON e.user_id = u.user_id
+GROUP BY u.user_id, u.name
+ORDER BY total_amount DESC
+LIMIT 1;
+Query Raw Response:
+[('Sam Rivera', 14231.24)]
+Friendly Response:
+These results don’t tell us who has the most money—only who has the highest total expenses. Sam Rivera has the highest total expenses at $14,231.24.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who has the least money?
+SQL Syntax Response:
+SELECT u.name,
+       SUM(c.max_amount - COALESCE(s.total_spent, 0)) AS money_remaining
+FROM user AS u
+JOIN budget AS b ON b.owner_id = u.user_id
+JOIN category AS c ON c.budget_id = b.budget_id
+LEFT JOIN (
+    SELECT category_id, SUM(amount) AS total_spent
+    FROM expense
+    GROUP BY category_id
+) AS s ON s.category_id = c.category_id
+GROUP BY u.user_id, u.name
+ORDER BY money_remaining ASC
+LIMIT 1;
+Query Raw Response:
+[('Taylor Brooks', 181.88)]
+Friendly Response:
+Taylor Brooks has the least money remaining in their budgets, with $181.88 left.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who has spent the most money?
+SQL Syntax Response:
+SELECT u.name, SUM(e.amount) AS total_spent
+FROM expense e
+JOIN user u ON e.user_id = u.user_id
+GROUP BY u.user_id
+ORDER BY total_spent DESC
+LIMIT 1;
+Query Raw Response:
+[('Sam Rivera', 14231.24)]
+Friendly Response:
+Sam Rivera has spent the most money, with a total of $14,231.24.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+In which of Jordan Rivera's expense catagories has he saved the most money?
+SQL Syntax Response:
+SELECT c.name, c.max_amount - COALESCE(SUM(e.amount), 0) AS money_saved
+FROM category c
+JOIN budget b ON c.budget_id = b.budget_id
+JOIN user u ON b.owner_id = u.user_id
+LEFT JOIN expense e ON e.category_id = c.category_id
+WHERE u.name = 'Jordan Rivera'
+GROUP BY c.category_id
+ORDER BY money_saved DESC
+LIMIT 1;
+Query Raw Response:
+[('Income', 464.96000000000004)]
+Friendly Response:
+The result shows “Income” with $464.96 saved, but it doesn’t identify which expense category Jordan Rivera saved the most money in.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+which of Casey Nguyen's expenses was the most expensive?
+SQL Syntax Response:
+SELECT e.name, e.amount, e.expense_date
+FROM expense e
+JOIN user u ON e.user_id = u.user_id
+WHERE u.name = 'Casey Nguyen'
+ORDER BY e.amount DESC
+LIMIT 1;
+Query Raw Response:
+[('Rent', 850.0, '2026-07-05')]
+Friendly Response:
+Casey Nguyen’s most expensive expense was Rent at $850, dated July 5, 2026.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+Who spends the most money on eating out?
+SQL Syntax Response:
+SELECT u.name, SUM(e.amount) AS total_spent
+FROM expense e
+JOIN user u ON e.user_id = u.user_id
+JOIN category c ON e.category_id = c.category_id
+WHERE c.name = 'Eating Out'
+GROUP BY u.user_id, u.name
+ORDER BY total_spent DESC
+LIMIT 1;
+Query Raw Response:
+[('Casey Nguyen', 284.48)]
+Friendly Response:
+Casey Nguyen spends the most on eating out, with a total of $284.48.
+########################################################################
+Running strategy: cross_domain_few_shot
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who likes to shop at Costco?
+SQL Syntax Response:
+select distinct u.user_id, u.name
+from user u
+join expense e on e.user_id = u.user_id
+where e.name like '%Costco%';
+Query Raw Response:
+[(1, 'Jordan Rivera'), (2, 'Sam Rivera'), (3, 'Casey Nguyen'), (5, 'Taylor Brooks')]
+Friendly Response:
+Jordan Rivera, Sam Rivera, Casey Nguyen, and Taylor Brooks have Costco-related expenses. These results don’t tell us whether they like shopping there, though.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+What percentage of Jordan Rivera's total money has been spent?
+SQL Syntax Response:
+with category_totals as (
+    select c.category_id,
+           c.max_amount,
+           coalesce(sum(e.amount), 0) as spent
+    from category c
+    join budget b on c.budget_id = b.budget_id
+    join user u on b.owner_id = u.user_id
+    left join expense e on e.category_id = c.category_id
+    where u.name = 'Jordan Rivera'
+    group by c.category_id, c.max_amount
+)
+select 100.0 * sum(spent) / nullif(sum(max_amount), 0) as percentage_spent
+from category_totals;
+Query Raw Response:
+[(95.13752045826514,)]
+Friendly Response:
+Jordan Rivera has spent approximately 95.14% of their total budgeted money.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+Who has spent all of their money?
+SQL Syntax Response:
+with category_spending as (
+    select c.category_id, c.budget_id, c.max_amount,
+           coalesce(sum(e.amount), 0) as spent
+    from category c
+    join budget b on b.budget_id = c.budget_id
+    left join expense e
+        on e.category_id = c.category_id
+        and e.expense_date between b.start_date and b.end_date
+    group by c.category_id, c.budget_id, c.max_amount
+),
+exhausted_budgets as (
+    select budget_id
+    from category_spending
+    group by budget_id
+    having sum(spent) >= sum(max_amount)
+)
+select distinct u.user_id, u.name
+from user u
+join budget b on b.owner_id = u.user_id
+join exhausted_budgets eb on eb.budget_id = b.budget_id;
+Query Raw Response:
+[(1, 'Jordan Rivera')]
+Friendly Response:
+Jordan Rivera has spent all or more of the money allocated to at least one of their budgets.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+Who doesn't have any money?
+SQL Syntax Response:
+select u.user_id, u.name
+from user u
+left join budget b on b.owner_id = u.user_id
+left join category c on c.budget_id = b.budget_id
+left join (
+    select category_id, sum(amount) as spent
+    from expense
+    group by category_id
+) e on e.category_id = c.category_id
+group by u.user_id, u.name
+having coalesce(sum(c.max_amount - coalesce(e.spent, 0)), 0) <= 0;
+Query Raw Response:
+[(2, 'Sam Rivera'), (4, 'Morgan Lee')]
+Friendly Response:
+The results show no positive remaining budget for Sam Rivera and Morgan Lee, but they don’t tell us whether either person actually has any money.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who has the most money?
+SQL Syntax Response:
+SELECT u.user_id, u.name,
+       SUM(c.max_amount - COALESCE((
+           SELECT SUM(e.amount)
+           FROM expense e
+           WHERE e.category_id = c.category_id
+             AND e.expense_date BETWEEN b.start_date AND b.end_date
+       ), 0)) AS money_remaining
+FROM user u
+JOIN budget b ON b.owner_id = u.user_id
+JOIN category c ON c.budget_id = b.budget_id
+GROUP BY u.user_id, u.name
+ORDER BY money_remaining DESC
+LIMIT 1;
+Query Raw Response:
+[(1, 'Jordan Rivera', 1188.3899999999996)]
+Friendly Response:
+Jordan Rivera has the most money remaining in their budgets: $1,188.39. These results don’t show who has the most money overall.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who has the least money?
+SQL Syntax Response:
+SELECT u.user_id, u.name,
+       SUM(c.max_amount - COALESCE(e.total_spent, 0)) AS money_remaining
+FROM user AS u
+JOIN budget AS b ON b.owner_id = u.user_id
+JOIN category AS c ON c.budget_id = b.budget_id
+LEFT JOIN (
+    SELECT category_id, SUM(amount) AS total_spent
+    FROM expense
+    GROUP BY category_id
+) AS e ON e.category_id = c.category_id
+GROUP BY u.user_id, u.name
+ORDER BY money_remaining ASC
+LIMIT 1;
+Query Raw Response:
+[(5, 'Taylor Brooks', 181.88)]
+Friendly Response:
+Taylor Brooks has the least money remaining in their budgets, with $181.88 left.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+who has spent the most money?
+SQL Syntax Response:
+select u.user_id, u.name, sum(e.amount) as total_spent
+from user u
+join expense e on u.user_id = e.user_id
+group by u.user_id, u.name
+order by total_spent desc
+limit 1;
+Query Raw Response:
+[(2, 'Sam Rivera', 14231.24)]
+Friendly Response:
+Sam Rivera has spent the most money, with a total of $14,231.24.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+In which of Jordan Rivera's expense catagories has he saved the most money?
+SQL Syntax Response:
+SELECT c.name, b.name AS budget_name,
+       c.max_amount - COALESCE(SUM(e.amount), 0) AS money_saved
+FROM category c
+JOIN budget b ON c.budget_id = b.budget_id
+JOIN user u ON b.owner_id = u.user_id
+LEFT JOIN expense e ON c.category_id = e.category_id
+WHERE u.name = 'Jordan Rivera'
+GROUP BY c.category_id
+ORDER BY money_saved DESC
+LIMIT 1;
+Query Raw Response:
+[('Income', 'August 2026', 464.96000000000004)]
+Friendly Response:
+The result shows $464.96 saved in “Income” for August 2026. Since “Income” isn’t an expense category, this doesn’t answer which expense category Jordan saved the most in.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+which of Casey Nguyen's expenses was the most expensive?
+SQL Syntax Response:
+select e.name, e.amount
+from expense e
+join user u on e.user_id = u.user_id
+where u.name = 'Casey Nguyen'
+and e.amount = (
+    select max(e2.amount)
+    from expense e2
+    join user u2 on e2.user_id = u2.user_id
+    where u2.name = 'Casey Nguyen'
+);
+Query Raw Response:
+[('Rent', 850.0), ('Rent', 850.0), ('Rent', 850.0)]
+Friendly Response:
+Casey Nguyen’s most expensive expense was Rent at $850.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Question:
+Who spends the most money on eating out?
+SQL Syntax Response:
+SELECT u.user_id, u.name, SUM(e.amount) AS total_spent
+FROM user u
+JOIN expense e ON e.user_id = u.user_id
+JOIN category c ON c.category_id = e.category_id
+WHERE c.name = 'Eating Out'
+GROUP BY u.user_id, u.name
+ORDER BY total_spent DESC
+LIMIT 1;
+Query Raw Response:
+[(3, 'Casey Nguyen', 284.48)]
+Friendly Response:
+Casey Nguyen spends the most on eating out, with a total of $284.48.
+Done!
